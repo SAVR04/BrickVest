@@ -1,5 +1,17 @@
 const PROPERTY_KEY = "bricklaneProperties";
+const userId = localStorage.getItem("bricklaneUserId");
+if (!userId) window.location.href = "login.html?role=seller";
+document.querySelector(".brand").href = "seller.html";
 let properties = [];
+function setAccountName() {
+  const users = JSON.parse(localStorage.getItem("bricklaneUsers") || "[]");
+  const user = users.find((item) => item.id === userId);
+  if (user) {
+    document.querySelector(".account-name").textContent = user.name;
+    document.querySelector(".avatar").textContent = user.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+    document.querySelector(".dashboard-intro h1").textContent = `${user.name.split(" ")[0]}'s property desk.`;
+  }
+}
 const money = (value) =>
   new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -74,7 +86,7 @@ document.querySelector("#listing-form").addEventListener("submit", (event) => {
     totalTokens,
     tokenPrice: Math.round((totalValuation / totalTokens) * 100) / 100,
     availableTokens: totalTokens,
-    sellerId: "seller-demo",
+    sellerId: userId || "seller-demo",
     projectedYield: 8.2,
   });
   localStorage.setItem(PROPERTY_KEY, JSON.stringify(properties));
@@ -87,10 +99,7 @@ document.querySelector("#logout").addEventListener("click", () => {
   localStorage.removeItem("bricklaneRole");
   window.location.href = "index.html";
 });
-document.querySelector("#reset-demo").addEventListener("click", () => {
-  localStorage.removeItem(PROPERTY_KEY);
-  window.location.reload();
-});
+setAccountName();
 loadProperties()
   .then((loaded) => {
     properties = loaded;
