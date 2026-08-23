@@ -3,7 +3,14 @@ const userId = localStorage.getItem("bricklaneUserId");
 if (!userId) window.location.href = "login.html";
 const PORTFOLIO_KEY = `bricklanePortfolio:${userId || "guest"}`;
 const role = localStorage.getItem("bricklaneRole") || "investor";
-const currentUser = JSON.parse(localStorage.getItem("bricklaneUsers") || "[]").find((user) => user.id === userId) || { name: "Your profile", role };
+const users = JSON.parse(localStorage.getItem("bricklaneUsers") || "[]");
+const demoUsers = { "investor-demo": { name: "Jordan Davis", role: "investor" }, "seller-demo": { name: "Alex Kim", role: "seller" } };
+const currentUser = users.find((user) => user.id === userId) || demoUsers[userId] || { name: "Your profile", role };
+const initials = currentUser.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+document.querySelector("#profile-avatar").textContent = initials;
+document.querySelector("#profile-mark").textContent = initials;
+document.querySelector("#profile-account-name").textContent = currentUser.name;
+document.querySelector("#profile-avatar").classList.toggle("avatar-green", currentUser.role === "seller");
 const money = (value) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
 
 async function loadProperties() {
@@ -39,8 +46,8 @@ function renderSeller(properties) {
 }
 loadProperties().then((properties) => {
   const isSeller = role === "seller";
-  const initials = currentUser.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
   setText("#profile-avatar", initials);
+  setText("#profile-mark", initials);
   setText("#profile-account-name", currentUser.name);
   document.querySelector("#profile-avatar").classList.toggle("avatar-green", isSeller);
   document.querySelector("#dashboard-link").href = isSeller ? "seller.html" : "customer.html";
