@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "task-execution-engine": {
+      "source": "davila7/claude-code-templates",
+      "sourceType": "github",
+      "skillPath": "cli-tool/components/skills/development/task-execution-engine/SKILL.md",
+      "computedHash": "816db7156c6901e3255ad211b1cd6e62234d555ae0425c4a5a4c680ef1c65aeb"
+    },
+    "ui-ux-pro-max": {
+      "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/ui-ux-pro-max/SKILL.md",
+      "computedHash": "d1de8ff8d228cd4204bf06eb959ef4317d5b927908d9f42765971e33e80c8a7e"
+    }
+  }
+}
