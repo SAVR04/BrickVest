@@ -1,5 +1,8 @@
 const PROPERTY_KEY = "bricklaneProperties";
-const PORTFOLIO_KEY = "bricklanePortfolio";
+const userId = localStorage.getItem("bricklaneUserId");
+if (!userId) window.location.href = "login.html";
+const PORTFOLIO_KEY = `bricklanePortfolio:${userId || "guest"}`;
+document.querySelector(".brand").href = "customer.html";
 let properties = [];
 let selectedProperty = null;
 let activeFilter = "all";
@@ -11,7 +14,16 @@ const money = (value) =>
     maximumFractionDigits: 0,
   }).format(value);
 const getPortfolio = () =>
-  JSON.parse(localStorage.getItem(PORTFOLIO_KEY) || "{}");
+  JSON.parse(localStorage.getItem(PORTFOLIO_KEY) || (userId === "investor-demo" ? localStorage.getItem("bricklanePortfolio") : null) || "{}");
+function setAccountName() {
+  const users = JSON.parse(localStorage.getItem("bricklaneUsers") || "[]");
+  const user = users.find((item) => item.id === userId);
+  if (user) {
+    document.querySelector(".account-name").textContent = user.name;
+    document.querySelector(".avatar").textContent = user.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+    document.querySelector(".dashboard-intro h1").textContent = `Good morning, ${user.name.split(" ")[0]}.`;
+  }
+}
 const saveProperties = () =>
   localStorage.setItem(PROPERTY_KEY, JSON.stringify(properties));
 async function loadProperties() {
@@ -144,11 +156,7 @@ document.querySelector("#logout").addEventListener("click", () => {
   localStorage.removeItem("bricklaneRole");
   window.location.href = "index.html";
 });
-document.querySelector("#reset-demo").addEventListener("click", () => {
-  localStorage.removeItem(PROPERTY_KEY);
-  localStorage.removeItem(PORTFOLIO_KEY);
-  window.location.reload();
-});
+setAccountName();
 loadProperties()
   .then((loaded) => {
     properties = loaded;

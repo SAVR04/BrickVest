@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Sign in to your Bricklane property account.">
+  <title>Sign in | Bricklane</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500;1,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="auth-page">
+  <header class="site-header shell">
+    <a class="brand" href="index.html" aria-label="Bricklane home"><span class="brand-mark">B</span><span>bricklane</span></a>
+    <span class="network-status"><i></i> Private beta · 2026</span>
+  </header>
+  <main class="auth-shell shell">
+    <section class="auth-intro">
+      <p class="eyebrow">Welcome back</p>
+      <h1>Your place<br><em>in the market.</em></h1>
+      <p class="muted">Sign in to keep track of the properties you own or the places you are bringing to Bricklane.</p>
+    </section>
+    <section class="auth-panel" aria-labelledby="sign-in-title">
+      <p class="eyebrow">Choose your workspace</p>
+      <h2 id="sign-in-title">Sign in</h2>
+      <div class="role-switch" role="tablist" aria-label="Account type">
+        <button class="role-option active" type="button" data-auth-role="investor" role="tab" aria-selected="true">Buyer</button>
+        <button class="role-option" type="button" data-auth-role="seller" role="tab" aria-selected="false">Seller</button>
+      </div>
+      <form id="login-form">
+        <label>Email address<input name="email" type="email" value="jordan@bricklane.demo" autocomplete="email" required></label>
+        <label>Password<input name="password" type="password" value="bricklane" autocomplete="current-password" required></label>
+        <p class="form-hint" id="login-hint">Demo buyer: jordan@bricklane.demo</p>
+        <button class="button button-primary button-full" type="submit">Continue to Bricklane <span>↗</span></button>
+      </form>
+      <p class="auth-footer">New to Bricklane? <a href="signup.html">Create an account</a></p>
+    </section>
+  </main>
+  <script src="js/login.js"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Create your Bricklane property account.">
+  <title>Create account | Bricklane</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500;1,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="auth-page">
+  <header class="site-header shell"><a class="brand" href="index.html" aria-label="Bricklane home"><span class="brand-mark">B</span><span>bricklane</span></a><span class="network-status"><i></i> Private beta · 2026</span></header>
+  <main class="auth-shell shell">
+    <section class="auth-intro"><p class="eyebrow">New to Bricklane</p><h1>Make a place<br><em>your own.</em></h1><p class="muted">Create a personal workspace for your property journey. Your portfolio and listings stay connected to your account.</p></section>
+    <section class="auth-panel" aria-labelledby="sign-up-title">
+      <p class="eyebrow">Create your workspace</p><h2 id="sign-up-title">Sign up</h2>
+      <div class="role-switch" role="tablist" aria-label="Account type"><button class="role-option active" type="button" data-auth-role="investor" role="tab" aria-selected="true">Buyer</button><button class="role-option" type="button" data-auth-role="seller" role="tab" aria-selected="false">Seller</button></div>
+      <form id="signup-form"><label>Full name<input name="name" type="text" placeholder="Your name" autocomplete="name" required></label><label>Email address<input name="email" type="email" required autocomplete="email"></label><label>Password<input name="password" type="password" minlength="6" required autocomplete="new-password"></label><p class="form-hint" id="signup-hint">Create a buyer account</p><button class="button button-primary button-full" type="submit">Create account <span>↗</span></button></form>
+      <p class="auth-footer">Already have an account? <a href="login.html">Sign in</a></p>
+    </section>
+  </main>
+  <script src="js/login.js"></script>
+</body>
+</html>
