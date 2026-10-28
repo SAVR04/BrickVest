@@ -110,7 +110,7 @@ if (signupForm) {
   });
 }
 
-// This points the brand back to the signed-in user's workspace when known.
+// This sends signed-in users to their dashboard when they click the brand.
 if (brandLink && sessionStorage.getItem(TOKEN_KEY)) {
   brandLink.addEventListener("click", async (event) => {
     event.preventDefault();
