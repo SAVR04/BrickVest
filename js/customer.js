@@ -1,169 +1,161 @@
-const PROPERTY_KEY = "bricklaneProperties";
-const userId = localStorage.getItem("bricklaneUserId");
-if (!userId) window.location.href = "login.html";
-const PORTFOLIO_KEY = `bricklanePortfolio:${userId || "guest"}`;
-document.querySelector(".brand").href = "customer.html";
 let properties = [];
+let currentUser = null;
+let portfolio = {};
 let selectedProperty = null;
 let activeFilter = "all";
 
+// This formats prices the same way across the buyer dashboard.
 const money = (value) =>
   new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 0,
   }).format(value);
-const getPortfolio = () =>
-  JSON.parse(localStorage.getItem(PORTFOLIO_KEY) || (userId === "investor-demo" ? localStorage.getItem("bricklanePortfolio") : null) || "{}");
-function setAccountName() {
-  const users = JSON.parse(localStorage.getItem("bricklaneUsers") || "[]");
-  const user = users.find((item) => item.id === userId);
-  if (user) {
-    document.querySelector(".account-name").textContent = user.name;
-    document.querySelector(".avatar").textContent = user.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
-    document.querySelector(".dashboard-intro h1").textContent = `Good morning, ${user.name.split(" ")[0]}.`;
+
+// This loads the marketplace, the buyer's holdings, and the account details.
+async function loadDashboard() {
+  currentUser = await getCurrentUser();
+  if (!currentUser) return;
+  if (currentUser.role !== "investor") {
+    window.location.href = "seller.html";
+    return;
   }
+
+  const [propertyResult, portfolioResult] = await Promise.all([
+    apiRequest("/api/properties"),
+    apiRequest("/api/properties/portfolio"),
+  ]);
+  properties = propertyResult.properties;
+  portfolio = portfolioResult.portfolio;
+  document.querySelector(".account-name").textContent = currentUser.name;
+  document.querySelector(".avatar").textContent = currentUser.name
+    .split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+  document.querySelector(".dashboard-intro h1").textContent =
+    `Good morning, ${currentUser.name.split(" ")[0]}.`;
+  renderMarketplace();
+  renderPortfolio();
 }
-const saveProperties = () =>
-  localStorage.setItem(PROPERTY_KEY, JSON.stringify(properties));
-async function loadProperties() {
-  const saved = localStorage.getItem(PROPERTY_KEY);
-  if (saved) return JSON.parse(saved);
-  const response = await fetch("data/properties.json");
-  const seeded = await response.json();
-  localStorage.setItem(PROPERTY_KEY, JSON.stringify(seeded));
-  return seeded;
-}
+
+// This builds a safe marketplace card for one property.
 function cardTemplate(property) {
   const sold = property.totalTokens - property.availableTokens;
   const progress = Math.round((sold / property.totalTokens) * 100);
-  return `<article class="property-card"><div class="property-image"><img src="${property.imageUrl}" alt="${property.title}"><span class="category-tag">${property.category}</span><span class="yield-tag">${property.projectedYield || 8.2}% yield</span></div><div class="property-card-body"><div class="property-location">${property.location || "Global asset"}</div><h3>${property.title}</h3><p>${property.description}</p><div class="property-price"><span>1 fraction</span><strong>${money(property.tokenPrice)}</strong></div><div class="progress-track"><i style="width:${progress}%"></i></div><div class="property-meta"><span>${property.availableTokens.toLocaleString()} available</span><button class="button button-small button-dark" data-buy="${property.id}">Buy fractions <span>↗</span></button></div></div></article>`;
+  return `<article class="property-card"><div class="property-image"><img src="${escapeHtml(property.imageUrl)}" alt="${escapeHtml(property.title)}"><span class="category-tag">${escapeHtml(property.category)}</span><span class="yield-tag">${property.projectedYield || 8.2}% yield</span></div><div class="property-card-body"><div class="property-location">${escapeHtml(property.location || "Global asset")}</div><h3>${escapeHtml(property.title)}</h3><p>${escapeHtml(property.description)}</p><div class="property-price"><span>1 fraction</span><strong>${money(property.tokenPrice)}</strong></div><div class="progress-track"><i style="width:${progress}%"></i></div><div class="property-meta"><span>${property.availableTokens.toLocaleString()} available</span><button class="button button-small button-dark" data-buy="${escapeHtml(property.id)}">Buy fractions <span>↗</span></button></div></div></article>`;
 }
+
+// This shows all properties or only the category the buyer picked.
 function renderMarketplace() {
-  const visible =
-    activeFilter === "all"
-      ? properties
-      : properties.filter((property) => property.category === activeFilter);
+  const visible = activeFilter === "all"
+    ? properties
+    : properties.filter((property) => property.category === activeFilter);
   document.querySelector("#marketplace-grid").innerHTML = visible.length
     ? visible.map(cardTemplate).join("")
     : '<p class="empty-state">No properties match this filter.</p>';
-  document
-    .querySelectorAll("[data-buy]")
-    .forEach((button) =>
-      button.addEventListener("click", () => openBuyModal(button.dataset.buy)),
-    );
+
+  document.querySelectorAll("[data-buy]").forEach((button) => {
+    button.addEventListener("click", () => openBuyModal(button.dataset.buy));
+  });
 }
+
+// This refreshes the buyer's totals and the portfolio table.
 function renderPortfolio() {
-  const portfolio = getPortfolio();
-  const entries = Object.entries(portfolio).filter(
-    ([, holding]) => holding.tokens > 0,
-  );
-  const value = entries.reduce(
-    (sum, [, holding]) => sum + holding.tokens * holding.tokenPrice,
-    0,
-  );
-  const invested = entries.reduce(
-    (sum, [, holding]) => sum + holding.tokens * holding.tokenPrice,
-    0,
-  );
+  const entries = Object.entries(portfolio).filter(([, holding]) => holding.tokens > 0);
+  const value = entries.reduce((sum, [, holding]) => sum + holding.tokens * holding.tokenPrice, 0);
+  const tokenCount = entries.reduce((sum, [, holding]) => sum + holding.tokens, 0);
+
   document.querySelector("#portfolio-metrics").innerHTML =
-    `<div class="metric-card"><span class="metric-icon mint">◈</span><small>Total portfolio value</small><strong>${money(value)}</strong><span class="metric-positive">↗ +4.2% this month</span></div><div class="metric-card"><span class="metric-icon orange">↗</span><small>Total invested</small><strong>${money(invested)}</strong><span class="metric-note">Across ${entries.length} assets</span></div><div class="metric-card"><span class="metric-icon blue">⌁</span><small>Available balance</small><strong>$12,500</strong><span class="metric-note">Demo wallet balance</span></div>`;
+    `<div class="metric-card"><span class="metric-icon mint">◈</span><small>Total portfolio value</small><strong>${money(value)}</strong><span class="metric-positive">↗ +4.2% this month</span></div><div class="metric-card"><span class="metric-icon orange">↗</span><small>Total invested</small><strong>${money(value)}</strong><span class="metric-note">Across ${entries.length} assets</span></div><div class="metric-card"><span class="metric-icon blue">⌁</span><small>Fractions owned</small><strong>${tokenCount.toLocaleString()}</strong><span class="metric-note">Saved to your account</span></div>`;
   document.querySelector("#portfolio-count").textContent =
     `${entries.length} asset${entries.length === 1 ? "" : "s"}`;
   document.querySelector("#portfolio-list").innerHTML = entries.length
-    ? `<div class="portfolio-head"><span>Asset</span><span>Tokens owned</span><span>Current value</span><span></span></div>${entries.map(([id, holding]) => `<div class="portfolio-row"><div class="portfolio-asset"><span class="mini-property">${holding.title.slice(0, 1)}</span><span><strong>${holding.title}</strong><small>${holding.location || "Tokenized property"}</small></span></div><span>${holding.tokens.toLocaleString()}</span><strong>${money(holding.tokens * holding.tokenPrice)}</strong><span class="gain">+${holding.projectedYield || 8.2}%</span></div>`).join("")}`
+    ? `<div class="portfolio-head"><span>Asset</span><span>Tokens owned</span><span>Current value</span><span></span></div>${entries.map(([id, holding]) => `<div class="portfolio-row"><div class="portfolio-asset"><span class="mini-property">${escapeHtml(holding.title.slice(0, 1))}</span><span><strong>${escapeHtml(holding.title)}</strong><small>${escapeHtml(holding.location || "Tokenized property")}</small></span></div><span>${holding.tokens.toLocaleString()}</span><strong>${money(holding.tokens * holding.tokenPrice)}</strong><span class="gain">+${holding.projectedYield || 8.2}%</span></div>`).join("")}`
     : '<div class="empty-state">Your first property is waiting above.</div>';
 }
+
+// This opens the buy dialog with the selected property's price and token limit.
 function openBuyModal(id) {
   selectedProperty = properties.find((property) => property.id === id);
+  if (!selectedProperty) return;
   document.querySelector("#buy-title").textContent = selectedProperty.title;
   document.querySelector("#buy-price").textContent =
     `${money(selectedProperty.tokenPrice)} per token · ${selectedProperty.availableTokens.toLocaleString()} available`;
   const input = document.querySelector("#token-amount");
   input.value = 1;
   input.max = selectedProperty.availableTokens;
-  document.querySelector("#buy-total").textContent = money(
-    selectedProperty.tokenPrice,
-  );
+  document.querySelector("#buy-total").textContent = money(selectedProperty.tokenPrice);
   document.querySelector("#buy-modal").classList.add("open");
   input.focus();
 }
+
+// This closes any open dialog on the page.
 function closeModals() {
-  document
-    .querySelectorAll(".modal-backdrop")
-    .forEach((modal) => modal.classList.remove("open"));
+  document.querySelectorAll(".modal-backdrop").forEach((modal) => modal.classList.remove("open"));
 }
+
+// This briefly shows a status message after a buyer action.
 function showToast(message) {
   const toast = document.querySelector("#toast");
   toast.textContent = message;
   toast.classList.add("show");
   setTimeout(() => toast.classList.remove("show"), 2800);
 }
-document.querySelector("#buy-form").addEventListener("submit", (event) => {
+
+// This records the purchase on the server and redraws with fresh MongoDB data.
+document.querySelector("#buy-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const amount = Number(document.querySelector("#token-amount").value);
-  if (
-    !Number.isInteger(amount) ||
-    amount < 1 ||
-    amount > selectedProperty.availableTokens
-  )
-    return showToast(
-      `Choose between 1 and ${selectedProperty.availableTokens.toLocaleString()} tokens.`,
-    );
-  selectedProperty.availableTokens -= amount;
-  saveProperties();
-  const portfolio = getPortfolio();
-  const current = portfolio[selectedProperty.id] || {
-    tokens: 0,
-    tokenPrice: selectedProperty.tokenPrice,
-    title: selectedProperty.title,
-    location: selectedProperty.location,
-    projectedYield: selectedProperty.projectedYield,
-  };
-  current.tokens += amount;
-  portfolio[selectedProperty.id] = current;
-  localStorage.setItem(PORTFOLIO_KEY, JSON.stringify(portfolio));
-  closeModals();
-  renderMarketplace();
-  renderPortfolio();
-  showToast(
-    `${amount.toLocaleString()} fraction${amount === 1 ? "" : "s"} added to your portfolio.`,
-  );
+  if (!selectedProperty || !Number.isInteger(amount) || amount < 1 ||
+      amount > selectedProperty.availableTokens) {
+    showToast("Choose a whole number of tokens that are still available.");
+    return;
+  }
+
+  try {
+    await apiRequest(`/api/properties/${encodeURIComponent(selectedProperty.id)}/purchase`, {
+      method: "POST",
+      body: JSON.stringify({ tokens: amount }),
+    });
+    closeModals();
+    await loadDashboard();
+    showToast(`${amount.toLocaleString()} fraction${amount === 1 ? "" : "s"} added to your portfolio.`);
+  } catch (error) {
+    showToast(error.message);
+  }
 });
+
+// This updates the estimated total as the token amount changes.
 document.querySelector("#token-amount").addEventListener("input", (event) => {
   document.querySelector("#buy-total").textContent = money(
     (Number(event.target.value) || 0) * (selectedProperty?.tokenPrice || 0),
   );
 });
-document
-  .querySelectorAll("[data-close-modal]")
-  .forEach((button) => button.addEventListener("click", closeModals));
-document.querySelectorAll(".modal-backdrop").forEach((modal) =>
+
+// This closes the dialog from its close buttons and shaded background.
+document.querySelectorAll("[data-close-modal]").forEach((button) => {
+  button.addEventListener("click", closeModals);
+});
+document.querySelectorAll(".modal-backdrop").forEach((modal) => {
   modal.addEventListener("click", (event) => {
     if (event.target === modal) closeModals();
-  }),
-);
-document.querySelectorAll("[data-filter]").forEach((button) =>
+  });
+});
+
+// This switches between all, residential, and commercial listings.
+document.querySelectorAll("[data-filter]").forEach((button) => {
   button.addEventListener("click", () => {
     activeFilter = button.dataset.filter;
-    document
-      .querySelectorAll("[data-filter]")
-      .forEach((item) => item.classList.toggle("active", item === button));
+    document.querySelectorAll("[data-filter]").forEach((item) => {
+      item.classList.toggle("active", item === button);
+    });
     renderMarketplace();
-  }),
-);
-document.querySelector("#logout").addEventListener("click", () => {
-  localStorage.removeItem("bricklaneRole");
-  window.location.href = "index.html";
-});
-setAccountName();
-loadProperties()
-  .then((loaded) => {
-    properties = loaded;
-    renderMarketplace();
-    renderPortfolio();
-  })
-  .catch(() => {
-    document.querySelector("#marketplace-grid").innerHTML =
-      '<p class="empty-state">Start the app through a local server to load property data.</p>';
   });
+});
+
+// This ends the server session when the buyer clicks the logout button.
+document.querySelector("#logout").addEventListener("click", signOut);
+
+// This starts the page and shows a useful message if the API is unavailable.
+loadDashboard().catch((error) => {
+  document.querySelector("#marketplace-grid").innerHTML =
+    `<p class="empty-state">${escapeHtml(error.message)} Start MongoDB and the Express server, then refresh.</p>`;
+});

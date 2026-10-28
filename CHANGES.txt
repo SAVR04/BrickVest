@@ -1,0 +1,243 @@
+BrickVest: Express, Node.js, sessions, JWT, Multer, and MongoDB
+================================================================
+
+What changed
+------------
+BrickVest used to keep accounts, property listings, and purchases in the
+browser's localStorage. Those records could disappear when browser data was
+cleared, and they were not shared between users. The project now has a small
+Node.js and Express server. The existing HTML, CSS, and browser JavaScript
+screens stay in place; Express serves those pages and handles their data.
+
+MongoDB now holds the accounts, properties, and investor holdings. Express
+sessions are saved in MongoDB too, instead of being kept only in server memory.
+Passwords are hashed with bcryptjs. Login also returns a signed JWT that the
+browser keeps in sessionStorage and sends with API calls. The session cookie is
+HTTP-only, and the token expires after one hour.
+
+Sellers can publish a listing with either an image URL or a JPG, PNG, or WebP
+photo. Multer accepts one photo at a time, with a five-megabyte size limit.
+Uploaded photos go into the ignored uploads folder and are served by Express.
+Buyers can purchase whole-number token amounts. The server checks availability,
+updates the listing, and saves each buyer's holding in MongoDB.
+
+Sellers can remove their own listings from the marketplace from the seller
+dashboard. This works even if tokens have already been sold: the listing is
+hidden from the marketplace, but its saved property details stay in MongoDB so
+existing investors can still see their holdings.
+
+Files and folders
+-----------------
+server.js
+  Starts Express, checks the environment, seeds the sample data, configures
+  MongoDB-backed sessions, serves the pages, and reports request errors.
+
+config/database.js
+  Connects Mongoose to the MongoDB address in .env.
+
+models/User.js
+  Stores account name, email, role, and the hashed password.
+
+models/Property.js
+  Stores each property's details, token price, and available token count.
+
+models/Holding.js
+  Stores the number of tokens each investor owns in each property.
+
+middleware/auth.js
+  Checks the login session or JWT and restricts seller-only actions.
+
+routes/authRoutes.js
+  Handles registration, login, logout, and the current-account lookup.
+
+routes/propertyRoutes.js
+  Handles marketplace listings, seller photo uploads, removal of
+  seller-owned listings, purchases, and portfolios.
+
+js/api.js
+  Shares the browser-side API helper, JWT header, text escaping, and logout.
+
+js/login.js, js/customer.js, js/seller.js, js/profile.js
+  Keep the existing browser interface, but get and save account/property data
+  through the Express API instead of localStorage.
+
+uploads/
+  Receives seller photos. Uploaded files are ignored by Git.
+
+Start it on a Windows computer
+------------------------------
+1. Install Node.js 20 or newer and start a local MongoDB server.
+2. Open PowerShell in the BrickVest project folder.
+3. Install the project packages:
+
+     npm install
+
+4. Create your local settings file:
+
+     Copy-Item .env.example .env
+
+5. Edit .env and replace SESSION_SECRET and JWT_SECRET with two different,
+   random strings that are at least 32 characters long. Keep .env private;
+   Git ignores it. The default MongoDB address is
+   mongodb://127.0.0.1:27017/brickvest.
+6. Start the website:
+
+     npm start
+
+7. Open http://localhost:3000 in a browser. Do not open the HTML file directly
+   from disk; the pages need the Express server and MongoDB.
+
+Sample accounts
+---------------
+The first server start adds these accounts when they are not already present:
+
+  Buyer:  jordan@bricklane.demo
+  Seller: alex@bricklane.demo
+  Password for both: bricklane
+
+Sample listings are copied from data/properties.json only when the MongoDB
+properties collection is empty. Creating an account on the signup page also
+works; the password is saved as a hash, never as plain text.
+
+The Bricklane logo on a signed-in dashboard goes to that user's dashboard,
+not the public landing page. The avatar and account name are one clickable
+profile link. Express checks the MongoDB session before serving dashboard and
+profile pages and redirects visitors who are signed out to sign in.
+
+Useful API routes
+-----------------
+POST /api/auth/register       Create an investor or seller account.
+POST /api/auth/login          Check an email/password and start a session.
+POST /api/auth/logout         End the current session.
+GET  /api/auth/me             Get the signed-in account.
+GET  /api/properties          List marketplace properties.
+GET  /api/properties?mine=true
+                              List the signed-in seller's properties.
+POST /api/properties          Create a seller listing; can include an image.
+DELETE /api/properties/:id    Remove your listing from the marketplace.
+POST /api/properties/:id/purchase
+                              Buy available tokens as an investor.
+GET  /api/properties/portfolio
+                              Read the signed-in investor's holdings.
+
+Run npm run check to ask Node.js to syntax-check the server and browser scripts.
+
+How the files and routes connect
+--------------------------------
+The browser never connects straight to MongoDB. Data follows this path:
+
+  HTML page
+    -> browser JavaScript
+    -> js/api.js sends fetch() to an /api/... URL
+    -> server.js mounts the matching Express router
+    -> middleware checks the session/JWT and account role
+    -> route reads or changes data using a Mongoose model
+    -> MongoDB returns the saved document(s)
+    -> Express sends JSON back to the browser
+    -> browser JavaScript updates the page
+
+The route mount is important: server.js:90 mounts routes/authRoutes.js at
+/api/auth, and server.js:91 mounts routes/propertyRoutes.js at
+/api/properties. Each router adds its own smaller path. For example,
+router.post("/login") becomes POST /api/auth/login; it is not a separate
+server. router.post("/") in the property router becomes POST /api/properties.
+
+1. Server startup and database
+   - server.js:1-14 loads settings and imports Express, session storage,
+     database setup, models, and the two route files.
+   - server.js:66-88 adds JSON form parsing and express-session. Sessions go
+     into MongoDB with connect-mongo at server.js:76-81.
+   - config/database.js:4-8 connects Mongoose to MONGODB_URI.
+   - server.js:137-143 checks secrets, connects MongoDB, seeds demo data, sets
+     up routes, and starts listening for browser requests.
+   - models/User.js:3-13 defines user documents; models/Property.js:3-22
+     defines property documents; models/Holding.js:3-14 defines investor
+     holdings and prevents duplicate user/property pairs.
+
+2. Sign up and login
+   - login.html:40-41 and signup.html:24-25 load js/api.js before js/login.js.
+   - js/login.js:65-73 sends the login form to POST /api/auth/login.
+     js/login.js:97-106 sends the signup form to POST /api/auth/register.
+   - server.js:90 mounts both routes/authRoutes.js endpoints under /api/auth.
+     The matching handlers are routes/authRoutes.js:40-70 (register) and
+     routes/authRoutes.js:72-90 (login).
+   - routes/authRoutes.js uses models/User.js to find or create the account.
+     It hashes new passwords with bcryptjs, starts a MongoDB-backed session,
+     and returns a JWT. js/login.js:20-23 saves that token in sessionStorage.
+   - js/api.js:4-31 attaches the token as an Authorization: Bearer header and
+     sends same-origin requests with the session cookie.
+
+3. API authentication and page protection
+   - middleware/auth.js:5-26 contains requirePageAuth. server.js:96-98 runs
+     it before sending customer.html, seller.html, or profile.html. It checks
+     the MongoDB-backed session and redirects signed-out visitors to login.
+   - middleware/auth.js:29-59 contains requireAuth. API routes use it to check
+     the session and, when provided, verify that the JWT belongs to the same
+     account.
+   - middleware/auth.js:62-69 contains requireRole. It keeps seller actions
+     for sellers and investor purchase/portfolio actions for investors.
+   - routes/authRoutes.js:92-99 logs the user out. routes/authRoutes.js:101-110
+     and js/api.js:44-55 provide the current-account check used by dashboards.
+
+4. Marketplace, purchase, and profile
+   - customer.html:10 loads js/api.js and js/customer.js. In
+     js/customer.js:16-30, the buyer dashboard requests GET /api/properties
+     and GET /api/properties/portfolio.
+   - server.js:91 mounts routes/propertyRoutes.js under /api/properties.
+     routes/propertyRoutes.js:37-44 handles the marketplace GET and reads
+     models/Property.js.
+   - js/customer.js:104-124 sends a purchase to
+     POST /api/properties/:id/purchase. routes/propertyRoutes.js:113-142 checks
+     token availability, updates the property, and saves the buyer's record
+     using models/Holding.js.
+   - routes/propertyRoutes.js:145-166 builds a buyer portfolio from holdings
+     and property documents. js/profile.js:78 reads it for the profile page.
+   - js/seller.js:21 and js/profile.js:75 request
+     GET /api/properties?mine=true. routes/propertyRoutes.js:37-44 filters
+     these results by the signed-in seller.
+   - js/seller.js:53-75 confirms and sends DELETE /api/properties/:id.
+     routes/propertyRoutes.js:97-109 marks the seller's listing inactive.
+     The normal marketplace query filters inactive listings, but existing
+     investor portfolio details remain saved in MongoDB.
+
+5. Exactly where Multer is used
+   - The file input a seller chooses is in seller.html:6. Its form field is
+     named "image"; the browser accepts JPG, PNG, and WebP.
+   - Multer is imported in routes/propertyRoutes.js:5. The uploads folder is
+     prepared at routes/propertyRoutes.js:11-12.
+   - routes/propertyRoutes.js:15-22 configures disk storage, generates a
+     random filename, and chooses the file extension. The file is saved under
+     the project uploads/ folder, not inside MongoDB.
+   - routes/propertyRoutes.js:24-34 configures Multer limits and the allowed
+     image MIME types: one file, up to 5 MB, JPG/PNG/WebP only.
+   - Multer is actually run by upload.single("image") in
+     routes/propertyRoutes.js:46, as part of POST /api/properties. It fills in
+     req.file. The route saves that uploaded file's /uploads/... URL on the
+     MongoDB property document at routes/propertyRoutes.js:66-90.
+   - The browser submits the whole seller form as FormData in js/seller.js:111-123.
+     js/api.js:4-31 intentionally does not set JSON Content-Type for FormData;
+     the browser adds the multipart boundary needed by Multer.
+   - server.js:94 serves those saved image files at /uploads/... .
+     If no file is selected, the seller may supply an image URL instead.
+
+Line numbers above refer to the current project files; they may shift if code
+is edited later. To see the current line numbers in VS Code, open the file and
+look at the number beside the line in the left gutter.
+
+Student-friendly notes and limits
+----------------------------------
+- The frontend is still plain HTML, CSS, and browser JavaScript. Express and
+  Node.js are the server side; there is no need to replace a working interface
+  with a frontend framework for this project.
+- Sessions and JWTs are both demonstrated: the session cookie is maintained by
+  Express, while the browser adds its short-lived JWT to API requests.
+- Uploaded photos are stored on this computer, not inside MongoDB. For a real
+  hosted app, use private object storage and add image-content verification.
+- The purchase example updates the property and holding as two simple database
+  operations so it is easy to follow. A real money or investment product needs
+  MongoDB transactions, payment verification, audit records, and a security
+  review before launch.
+- Removing a listing hides it from new investors but keeps its saved details
+  available for buyers who already own tokens.
+- Use new secret strings and HTTPS when deploying. The demo accounts and
+  password are only for local learning.

@@ -11,9 +11,9 @@
 </head>
 <body class="app-page profile-page">
   <header class="app-header">
-    <a class="brand" href="index.html"><span class="brand-mark">B</span><span>bricklane</span></a>
+    <a class="brand" href="customer.html"><span class="brand-mark">B</span><span>bricklane</span></a>
     <nav><a class="nav-link" id="dashboard-link" href="customer.html">Dashboard</a><a class="nav-link active" href="profile.html">Profile</a></nav>
-    <div class="header-account"><span class="avatar" id="profile-avatar">B</span><span class="account-name" id="profile-account-name">Your profile</span><button class="icon-button" id="logout" title="Log out">↗</button></div>
+    <div class="header-account"><a class="account-profile-link" href="profile.html" aria-label="View your profile"><span class="avatar" id="profile-avatar">B</span><span class="account-name" id="profile-account-name">Your profile</span></a><button class="icon-button" id="logout" title="Log out">↗</button></div>
   </header>
   <main class="dashboard shell">
     <section class="profile-heading"><div><p class="eyebrow" id="profile-eyebrow">Account</p><h1 id="profile-title">Your profile</h1><p class="muted" id="profile-subtitle">Your property ownership, in one considered view.</p></div><div class="profile-mark" id="profile-mark">B</div></section>
@@ -21,6 +21,6 @@
     <section class="content-section"><div class="section-heading"><div><p class="eyebrow" id="holdings-eyebrow">Owned fractions</p><h2 id="holdings-title">Properties I own</h2></div><span class="mono" id="holding-count"></span></div><div class="profile-property-grid" id="profile-properties"></div></section>
   </main>
   <div class="toast" id="toast" role="status"></div>
-  <script src="js/profile.js"></script>
+  <script src="js/api.js"></script><script src="js/profile.js"></script>
 </body>
 </html>

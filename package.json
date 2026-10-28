@@ -1,0 +1,23 @@
+{
+  "name": "brickvest",
+  "version": "1.0.0",
+  "description": "A beginner-friendly property marketplace built with Express and MongoDB",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check config\\database.js && node --check models\\User.js && node --check models\\Property.js && node --check models\\Holding.js && node --check middleware\\auth.js && node --check routes\\authRoutes.js && node --check routes\\propertyRoutes.js && node --check js\\api.js && node --check js\\login.js && node --check js\\customer.js && node --check js\\seller.js && node --check js\\profile.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "connect-mongo": "^5.1.0",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "express-session": "^1.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.18.0",
+    "multer": "^2.0.2"
+  }
+}
